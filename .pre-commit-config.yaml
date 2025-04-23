@@ -1,0 +1,61 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.9.1
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-yaml
+      - id: debug-statements
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies: ["flake8-bugbear"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        args: ["--ignore-missing-imports"]
+
+  - repo: local
+    hooks:
+      - id: no-env-commit
+        name: Prevent .env commits
+        entry: bash -c 'for file in "$@"; do if [[ "$file" == .env ]]; then echo "🚫 .env file should not be committed."; exit 1; fi; done'
+        language: system
+        types: [file]
+
+      - id: env-check
+        name: Check environment.yml freshness
+        entry: conda run -n ai-stock-trader bash -c 'conda env export --no-builds | diff environment.yml - >/dev/null || (echo "🔁 Please update environment.yml with \`conda env export --no-builds > environment.yml\`" && exit 1)'
+        language: system
+        files: ^environment\.yml$
+
+      - id: docstring-check
+        name: Ensure all Python files have module-level docstrings
+        entry: python scripts/check_docstrings.py
+        language: python
+        types: [python]
+
+      - id: validate-yaml
+        name: Check for valid YAML
+        entry: conda run -n ai-stock-trader python -c "import sys, yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]"
+        language: system
+        types: [yaml]
+
+      - id: validate-json
+        name: Check for valid JSON
+        entry: python -c "import sys, json; [json.load(open(f)) for f in sys.argv[1:]]"
+        language: python
+        types: [json]
