@@ -215,7 +215,7 @@ def main() -> None:
         page_token: str | None = None
         pbar = tqdm(desc=f"News {args.symbol}", unit=" article")
 
-        while debug < 1:
+        while True:
             req = NewsRequest(
                 symbols=args.symbol,
                 start=start_dt,
@@ -235,7 +235,7 @@ def main() -> None:
 
             if page_token is None:
                 break
-            debug += 1
+
     print(f"✔ Saved {pbar.n} headlines → {full_path.name}")
 
 
