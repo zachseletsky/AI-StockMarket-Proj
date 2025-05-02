@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 download_alpaca_news.py
 =======================
@@ -18,9 +17,9 @@ Install dependencies:
 
     pip install alpaca-py python-dotenv pandas tqdm
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 Implementation notes
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 *   **Rate-limit guard** – a lightweight decorator sleeps just enough to keep
     aggregate call frequency ≤ 180 req/min (leaves head-room for other code).
 *   **Pagination** – Alpaca returns at most 50 headlines per page; we loop
@@ -32,10 +31,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+from typing import TextIO
+from typing import Iterable
 import time
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
+from datetime import timedelta
 from pathlib import Path
-from typing import Callable, Iterable, Tuple
+from typing import Callable
+from typing import Tuple
 
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.models.news import News
@@ -43,12 +47,17 @@ from alpaca.data.requests import NewsRequest
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-import os, sys
+import os
+import sys
 
 data_output_path = "data-lake/raw/news/"
-# ──────────────────────────────────────────────────────────────────────────────
+
+last_time: float = time.time()
+
+
+# ────────────────────────────────────────────────────────────────────────────
 # Rate-limit decorator
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 def ratelimited(max_calls_per_minute: int = 200) -> Callable:
     """
     Purpose
@@ -66,11 +75,10 @@ def ratelimited(max_calls_per_minute: int = 200) -> Callable:
         Upper bound for API calls in any 60-second rolling window.
     """
     period = 60.0 / max_calls_per_minute
-    last_time: float = 0.0
 
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
-            nonlocal last_time
+            global last_time
             elapsed = time.time() - last_time
             if elapsed < period:
                 time.sleep(period - elapsed)
@@ -83,13 +91,11 @@ def ratelimited(max_calls_per_minute: int = 200) -> Callable:
     return decorator
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 # Helper functions
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 @ratelimited(max_calls_per_minute=180)
-def fetch_page(
-    client: NewsClient, req: NewsRequest
-) -> Tuple[list[News], str | None]:
+def fetch_page(client: NewsClient, req: NewsRequest) -> Tuple[list[News], str | None]:
     """
     Purpose
     -------
@@ -107,12 +113,22 @@ def fetch_page(
         Request object (symbol list, date range, limit, page token).
     """
     resp = client.get_news(req)
-    return list(resp), resp.next_page_token
+
+    # print("resp: " + str(resp))
+    # print("\ntoken: " + str(resp.next_page_token))
+    return resp.data["news"], resp.next_page_token
 
 
 def iso8601(dt: datetime) -> str:
     """Return UTC ISO-8601 string with trailing 'Z'."""
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def daterange_chunks(start: datetime, end: datetime, delta: timedelta):
+    current = start
+    while current < end:
+        yield (current, min(current + delta, end))
+        current += delta
 
 
 # --------------------------------- helpers -------------------------------- #
@@ -122,38 +138,52 @@ def first_key(d: dict, *candidates):
         if k in d:
             return d[k]
     raise KeyError(f"None of {candidates} in dict")
+
+
 # -------------------------------------------------------------------------- #
 
-def save_rows(writer: csv.writer, news: list[News]) -> int:
+
+def dump_rows(rows: Iterable[list[str]], fh: TextIO) -> None:
+    writer = csv.writer(fh)
+    writer.writerows(rows)
+
+
+def save_rows(news: list[News], fh: TextIO) -> int:
     """
     Parameters
     ----------
-    writer : csv.writer
-    page_tuple : Tuple[str, dict]  # ("data", {"news": [...]})
-    
+    news: list[News]
+
     Returns
     -------
     int
+        List of formated lists of string values
         Number of rows written (for the progress bar).
     """
+    news_rows = []
+
     for d in news:
-        writer.writerow(
+        # print("\nDType: " + str(type(d)) + "\n D: \n" + str(d))
+        news_rows.append(
             [
-                str(d.id),
-                ";".join(d.symbols),
+                d.id,
                 d.created_at.isoformat().replace("+00:00", "Z"),
-                d.headline.replace("\n", " "),
-                d.author,
-                d.url
+                d.headline.replace("\n", " ").replace(",", "-"),
+                d.source,
+                ";".join(d.symbols),
+                d.updated_at,
+                d.url,
             ]
         )
+
+    dump_rows(news_rows, fh)
 
     return len(news)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 # Main driver
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 def main() -> None:
     """
     Parse CLI args, iterate through pages from 2015-01-01 00:00Z to *now*,
@@ -162,15 +192,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Download Alpaca Benzinga headlines for one ticker"
     )
-    parser.add_argument(
-        "--symbol", required=True, help="Ticker symbol (e.g. MSFT)"
-    )
-    parser.add_argument(
-        "--start", required=True, help="Start Date (YYYY-MM-DD)"
-    )
-    parser.add_argument(
-        "--end", required=True, help="End Date (YYYY-MM-DD)"
-    )
+    parser.add_argument("--symbol", required=True, help="Ticker symbol (e.g. MSFT)")
+    parser.add_argument("--start", required=True, help="Start Date (YYYY-MM-DD)")
+    parser.add_argument("--end", required=True, help="End Date (YYYY-MM-DD)")
     # parser.add_argument(
     #     "--out",
     #     required=True,
@@ -181,64 +205,71 @@ def main() -> None:
 
     load_dotenv(".env")  # reads .env
 
-    API_KEY   = os.getenv("APCA_API_KEY_ID")
+    API_KEY = os.getenv("APCA_API_KEY_ID")
     SECRET_KEY = os.getenv("APCA_API_SECRET_KEY")
-    BASE_URL  = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets")
-    
+    # BASE_URL =
+    # os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets")
+
     if not API_KEY or not SECRET_KEY:
         sys.exit("❌  Missing APCA_API_KEY_ID or APCA_API_SECRET_KEY in environment")
 
-
-    client = NewsClient(api_key=API_KEY, secret_key=SECRET_KEY)  # picks up creds + base URL from env
+    client = NewsClient(
+        api_key=API_KEY, secret_key=SECRET_KEY
+    )  # picks up creds + base URL from env
 
     # start_dt = datetime(2015, 1, 1, tzinfo=timezone.utc)
     # end_dt = datetime.now(timezone.utc)
 
-    debug = 0
     # prepare CSV write-path
-    full_path = Path(data_output_path + args.symbol + "_" + args.start + "_" + args.end + ".csv")
-    
+    full_path = Path(
+        data_output_path + args.symbol + "_" + args.start + "_" + args.end + ".csv"
+    )
+
     # set date range
     start_str = args.start.strip()
     end_str = args.end.strip()
-    start_dt = datetime(int(start_str[0:4]), int(start_str[5:7]), int(start_str[8:10]), tzinfo=timezone.utc)
-    end_dt = datetime(int(end_str[0:4]), int(end_str[5:7]), int(end_str[8:10]), tzinfo=timezone.utc)
+    start_dt = datetime(
+        int(start_str[0:4]),
+        int(start_str[5:7]),
+        int(start_str[8:10]),
+        tzinfo=timezone.utc,
+    )
+    end_dt = datetime(
+        int(end_str[0:4]), int(end_str[5:7]), int(end_str[8:10]), tzinfo=timezone.utc
+    )
 
-
-    #args.out.parent.mkdir(parents=True, exist_ok=True)
+    # args.out.parent.mkdir(parents=True, exist_ok=True)
     with full_path.open("w", newline="", encoding="utf-8") as fp:
-        writer = csv.writer(fp)
-        writer.writerow(
-            ["id", "symbols", "created_at", "headline", "author", "url"]
-        )
+        header = [
+            ["id", "created_at", "headline", "source", "symbols", "updated_at", "url"]
+        ]
+        dump_rows(header, fp)
 
-        page_token: str | None = None
         pbar = tqdm(desc=f"News {args.symbol}", unit=" article")
 
-        while True:
+        for chunk_start, chunk_end in daterange_chunks(
+            start_dt, end_dt, timedelta(days=1)
+        ):
+            print(f"[INFO] Fetching {chunk_start.date()} to {chunk_end.date()}")
             req = NewsRequest(
                 symbols=args.symbol,
-                start=start_dt,
-                end=end_dt,
+                start=chunk_start,
+                end=chunk_end,
                 limit=50,  # server max
-                page_token=page_token,
+                sort="desc",
             )
-            payload, page_token = fetch_page(client, req)
-            # articles = ((data, dic(list(News)), na)
-            if not payload:
-                break
 
-            articles = payload[0][1]["news"]
+            articles, _ = fetch_page(client, req)
 
-            save_rows(writer, articles)
-            pbar.update(len(articles))
+            if articles:
+                save_rows(articles, fp)
+                pbar.update(len(articles))
 
-            if page_token is None:
-                break
+            time.sleep(0.35)  # Stay well under 200 req/min
 
     print(f"✔ Saved {pbar.n} headlines → {full_path.name}")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     main()

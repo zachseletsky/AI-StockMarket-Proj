@@ -106,6 +106,80 @@ Custom scripts live in `/scripts`:
 
 ---
 
+Thought for 5 seconds
+
+
+Below is a Python file whose single variable **`readme_text`** holds the complete Markdown *without* using triple‑backtick fences (so nothing inside the string can accidentally close the code block).  You can copy‐paste this file directly into your repo.
+
+
+### 🔖 Lightweight Commit‑Message Playbook
+
+
+---
+
+#### 1  Template
+
+    <type>(<scope>): <imperative‑mood summary>
+
+    <body — optional, wrap ≤ 88 chars per line>
+
+    <footer — optional>
+
+* **`type`** – one of the canonical verbs below.
+* **`scope`** – a short noun (file, folder, feature); omit if obvious.
+* **Summary** – start with a verb in _imperative mood_ (“Add…”, “Fix…”). Keep ≤ 50 chars.
+* **Body** – explain **why** more than **how**. Use bullets for multiple points,
+  reference issues (`Closes #42`).
+* **Footer** – `BREAKING CHANGE:` notes, co‑authors, etc.
+
+---
+
+#### 2 Standard **`type`** Verbs
+
+| Type      | When to use                                                                    |
+|-----------|--------------------------------------------------------------------------------|
+| `feat`    | New user‑visible feature or capability                                         |
+| `fix`     | Bug fix that turns failing tests green                                         |
+| `docs`    | Documentation only (README, tutorials, docstrings)                             |
+| `style`   | Pure formatting / lint fixes (no code logic changes)                           |
+| `refactor`| Internal restructuring, no external behaviour change                           |
+| `test`    | Add or update tests                                                            |
+| `data`    | Add / update large datasets or `.sha256` artefacts                             |
+| `ci`      | Continuous‑integration config, pre‑commit hooks, GitHub Actions, env updates   |
+| `chore`   | Misc. maintenance (dependency bumps, tool configs)                             |
+
+---
+
+#### 3 Examples
+
+| Situation                                                        | Good commit message                                  |
+|------------------------------------------------------------------|------------------------------------------------------|
+| Added SHA‑256 hooks & aligned lint width                         | `ci: add .sha256 hooks and sync Flake8 to 88`        |
+| Implemented Alpaca headline fetcher                              | `feat(news): add Alpaca ticker‑headline pipeline`    |
+| Fixed type errors in `dump_rows`                                 | `fix(news): relax dump_rows typing for mypy`         |
+| Black reformat across pipelines                                  | `style(pipelines): run Black formatter`              |
+| Updated `environment.yml`                                        | `ci: refresh conda environment snapshot`             |
+
+---
+
+#### 4 Guidelines & Tips
+
+* **One idea per commit** when practical—easier reverts and reviews.
+* **Imperative mood**: think “this commit *will* …” (e.g. _Add_, _Remove_,
+  _Refactor_).
+* Keep the **subject line ≤ 50 chars**; wrap body text at 88 chars.
+* Skip the body if the summary says it all; add it if context matters.
+* Use `data:` commits when adding bulk files so others can pull selectively
+  (e.g., via Git LFS).
+* Consistent conventions enable automated changelogs
+  (semantic‑release, changelog‑ci) later.
+
+---
+
+> ✨ **Result:** a git history that reads like a clear diary, not a puzzle.
+
+
+
 
 ## 🙋 Support
 

@@ -1,6 +1,11 @@
+"""Fetch daily Yahoo! equity data and store it in data‑lake/raw.
+
+Part of the AI‑StockMarket‑Proj ETL pipeline.
+"""
+
 import yfinance as yf
 import os
-import pandas as pd
+
 
 def fetch_yahoo_data(ticker: str, start: str, end: str, interval: str = "1d"):
     data = yf.download(ticker, start=start, end=end, interval=interval)
@@ -13,10 +18,10 @@ def fetch_yahoo_data(ticker: str, start: str, end: str, interval: str = "1d"):
     data.to_csv(out_path)
     print(f"[✓] Saved {ticker} data to {out_path}")
 
+
 if __name__ == "__main__":
-    while (True):
+    while True:
         ticker = input("\nEnter Ticker: ").strip()
         start_date = input("Enter Start Date (YYYY-MM-DD): ").strip()
         end_date = input("Enter End Date (YYYY-MM-DD): ").strip()
         fetch_yahoo_data(ticker, start_date, end_date)
-

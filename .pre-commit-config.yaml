@@ -7,7 +7,7 @@ repos:
         language_version: python3.11
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
@@ -59,3 +59,22 @@ repos:
         entry: python -c "import sys, json; [json.load(open(f)) for f in sys.argv[1:]]"
         language: python
         types: [json]
+
+      # 1 — Update or create <file>.sha256 for every newly‑staged data file
+      - id: add-sha256
+        name: “Compute SHA‑256 side‑cars”
+        entry: python tools/sha256_monitor.py --oneshot
+        language: system  # use the project’s python
+        stages: [pre-commit]
+        # target any file inside data‑lake/**/**/**/ with the listed extensions
+        files: ^data-lake/(logs|metadata|processed|raw)/.*/[A-Z0-9]{1,8}/.*\\.(csv|parquet|feather|json|txt)$
+        pass_filenames: true
+
+      # 2 — Fail the commit if any tracked data file’s digest ≠ side‑car
+      - id: verify-sha256
+        name: “Verify SHA‑256 integrity”
+        entry: python tools/sha256_monitor.py --verify
+        language: system
+        stages: [pre-commit, pre-push]
+        files: ^data-lake/(logs|metadata|processed|raw)/.*/[A-Z0-9]{1,8}/.*\\.(csv|parquet|feather|json|txt)$
+        pass_filenames: true
