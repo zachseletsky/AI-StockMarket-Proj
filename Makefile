@@ -18,7 +18,7 @@ conda-activate:
 
 .PHONY: conda-install
 conda-install:
-	conda run -n $(ENV_NAME) && conda install --file requirements.txt
+	conda run -n $(ENV_NAME) && conda install --file environment.yml
 
 .PHONY: conda-export
 conda-export:
