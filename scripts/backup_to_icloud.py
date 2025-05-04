@@ -9,12 +9,9 @@ import shutil
 from pathlib import Path
 
 # Path to your local data-lake folder inside the GitHub repo
-data_lake_src = Path("data-lake")
-
+data_lake_src = Path(__file__).resolve().parent.parent / "data-lake"
 # Path to your iCloud Drive folder where the backup will be stored
-icloud_dst = Path(
-    "/Users/zachseletsky/Library/Mobile Documents/com~apple~CloudDocs/data-lake"
-)
+icloud_dst = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/date-lake"
 
 
 def copy_data_lake():
