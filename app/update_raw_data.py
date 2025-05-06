@@ -28,7 +28,7 @@ def get_today() -> str:
 def update_alpaca_news() -> None:
     fToday = get_today()
     # open metadata json file
-    fp = Path(os.path.join(metadata_raw_path, "news/news-metadata.json"))
+    fp = Path(os.path.join(metadata_raw_path, "news-metadata.json"))
     f = fp.open()
     # load json data
     jsonData = json.load(fp=f)
@@ -93,7 +93,7 @@ def update_alpaca_news() -> None:
 def update_equity_data() -> None:
     fToday = get_today()
     # open metadata json file
-    fp = Path(os.path.join(metadata_raw_path, "equities/equities-metadata.json"))
+    fp = Path(os.path.join(metadata_raw_path, "equities-metadata.json"))
     f = fp.open()
     # load json data
     jsonData = json.load(fp=f)
