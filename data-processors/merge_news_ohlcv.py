@@ -113,7 +113,7 @@ def sort_news_dates(news_df: pd.DataFrame, data_df: pd.DataFrame) -> list:
     list_of_dicts = []
     for i in range(len(dates)):
         row = data_df.iloc[i]
-        print("row: \n" + str(row))
+        # print("row: \n" + str(row))
         date = row[0]
         open = row[1]
         high = row[2]
