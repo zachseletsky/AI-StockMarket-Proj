@@ -222,7 +222,14 @@ def main() -> None:
 
     # prepare CSV write-path
     full_path = Path(
-        data_output_path + args.symbol + "_" + args.start + "_" + args.end + ".csv"
+        data_output_path
+        + "/"
+        + args.symbol
+        + "/"
+        + args.start
+        + "_"
+        + args.end
+        + ".csv"
     )
 
     # set date range

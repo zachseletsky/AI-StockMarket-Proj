@@ -20,6 +20,7 @@ from transformers import AutoTokenizer
 from transformers import AutoModel
 import torch
 import pyarrow.parquet as pq
+import argparse
 
 
 def load_headlines() -> pd.DataFrame:
@@ -134,7 +135,18 @@ def confirm_pd():
     print(df.describe())  # basic stats on numeric cols
 
 
-if __name__ == "__main__":
-    # train_model()
-    # confirm_schema()
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Download Alpaca Benzinga headlines for one ticker"
+    )
+    parser.add_argument("--symbol", required=True, help="Ticker symbol (e.g. MSFT)")
+    parser.add_argument("--start", required=True, help="Start Date (YYYY-MM-DD)")
+    parser.add_argument("--end", required=True, help="End Date (YYYY-MM-DD)")
+
+    train_model()
+    confirm_schema()
     confirm_pd()
+
+
+if __name__ == "__main__":
+    main()

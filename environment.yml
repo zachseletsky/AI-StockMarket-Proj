@@ -194,6 +194,7 @@ dependencies:
   - python-tzdata=2025.2
   - python_abi=3.11
   - pytz=2025.2
+  - pyyaml=6.0.2
   - pyzmq=26.4.0
   - qhull=2020.2
   - rav1e=0.6.6
@@ -231,6 +232,7 @@ dependencies:
   - ukkonen=1.0.1
   - unicodedata2=16.0.0
   - uri-template=1.3.0
+  - urllib3=2.4.0
   - virtualenv=20.30.0
   - wcwidth=0.2.13
   - webcolors=24.11.1
@@ -264,7 +266,6 @@ dependencies:
       - pydantic==2.11.3
       - pydantic-core==2.33.1
       - python-dotenv==1.1.0
-      - pyyaml==6.0.2
       - regex==2024.11.6
       - safetensors==0.5.3
       - sseclient-py==1.8.0
@@ -274,7 +275,6 @@ dependencies:
       - tqdm==4.67.1
       - transformers==4.51.3
       - typing-inspection==0.4.0
-      - urllib3==2.4.0
       - watchdog==6.0.0
       - websockets==10.4
       - yarl==1.20.0
