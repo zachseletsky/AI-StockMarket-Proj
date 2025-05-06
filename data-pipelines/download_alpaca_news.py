@@ -245,7 +245,7 @@ def main() -> None:
         int(end_str[0:4]), int(end_str[5:7]), int(end_str[8:10]), tzinfo=timezone.utc
     )
 
-    # args.out.parent.mkdir(parents=True, exist_ok=True)
+    full_path.touch(exist_ok=True)
     with full_path.open("w", newline="", encoding="utf-8") as fp:
         header = [
             ["id", "created_at", "headline", "source", "symbols", "updated_at", "url"]

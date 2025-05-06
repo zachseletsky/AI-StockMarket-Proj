@@ -33,7 +33,7 @@ import argparse
 raw_dir = "data-lake/raw"
 equities_dir = "/equities/"
 news_dir = "/news/"
-out_dir = "data-lake/processed/cleaned/"
+out_dir = "data-lake/processed/"
 
 
 # ensures news data is aligned so news data from day x is associated with
@@ -91,9 +91,9 @@ def sort_news_dates(news_df: pd.DataFrame, data_df: pd.DataFrame) -> list:
     proper_dates = []
     date_headline_objs: dict = {}
     for _, r in datetime_df.iterrows():
-        d = r[0]
-        t = r[1]
-        h = r[2]
+        d = r.iloc[0]
+        t = r.iloc[1]
+        h = r.iloc[2]
         if type(h) is str:
             continue
 
@@ -144,8 +144,8 @@ def load_dataframes(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     daterange = start + "_" + end
 
-    news_path = raw_dir + news_dir + "/" + ticker + "/" + daterange + ".csv"
-    equities_path = raw_dir + equities_dir + "/" + ticker + "/" + daterange + ".csv"
+    news_path = raw_dir + news_dir + ticker + "/" + daterange + ".csv"
+    equities_path = raw_dir + equities_dir + ticker + "/" + daterange + "_1d.csv"
 
     if not os.path.exists(news_path):
         raise Exception(
@@ -166,9 +166,7 @@ def load_dataframes(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Download Alpaca Benzinga headlines for one ticker"
-    )
+    parser = argparse.ArgumentParser(description="Merge news headlines and ohclv data")
     parser.add_argument("--symbol", required=True, help="Ticker symbol (e.g. MSFT)")
     parser.add_argument("--start", required=True, help="Start Date (YYYY-MM-DD)")
     parser.add_argument("--end", required=True, help="End Date (YYYY-MM-DD)")
