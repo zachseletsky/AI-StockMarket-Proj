@@ -242,7 +242,6 @@ dependencies:
   - xorg-libxau=1.0.12
   - xorg-libxdmcp=1.1.5
   - yaml=0.2.5
-  - yfinance=0.2.55
   - zeromq=4.3.5
   - zipp=3.21.0
   - zstandard=0.23.0
@@ -254,6 +253,7 @@ dependencies:
       - alpaca-py==0.40.0
       - annotated-types==0.7.0
       - charset-normalizer==3.4.2
+      - curl-cffi==0.10.0
       - deprecation==2.1.0
       - frozenlist==1.6.0
       - huggingface-hub==0.30.2
@@ -278,4 +278,5 @@ dependencies:
       - watchdog==6.0.0
       - websockets==10.4
       - yarl==1.20.0
+      - yfinance==0.2.58
 prefix: /opt/anaconda3/envs/ai-stock-trader

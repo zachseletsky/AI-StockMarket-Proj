@@ -26,14 +26,22 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import time
 from datetime import date
+import os
+import argparse
 
 # data directories
 raw_dir = "data-lake/raw"
 equities_dir = "/equities/"
 news_dir = "/news/"
-out_dir = "data-lake/processed"
+out_dir = "data-lake/processed/"
 
 
+# ensures news data is aligned so news data from day x is associated with
+#   news equity data from day x + 1. IE only headlines available at the
+#   by the end of the trading day are associated with that trading day
+#
+#   Market closes at 4pm, so day x includes headlines from x-1 @4:00pm to day
+#       x @3:59pm
 def compare_times(d: date, t: time, cutoff: time) -> str:
     f_date: datetime = datetime.combine(d, time(0, 0, 0))
     if datetime.combine(d, t) - datetime.combine(d, cutoff) >= timedelta(0, 0):
@@ -47,10 +55,26 @@ def compare_times(d: date, t: time, cutoff: time) -> str:
     return r
 
 
+def save_to_json(ticker: str, data: list) -> None:
+    pathname = out_dir + ticker + "_data.json"
+    if os.path.exists(pathname):
+        with Path(pathname).open("r") as fp:
+            curr_obj: dict = json.load(fp)
+            curr_data: list = curr_obj["data"]
+
+        curr_data.extend(data)
+        curr_obj["data"] = curr_data
+    else:
+        curr_obj = {"TICK": ticker, "data": data}
+
+    with Path(pathname).open("w") as fp:
+        json.dump(curr_obj, fp, indent=2)
+
+
 # Sorts news headlines by date only, where date x includes all news
 # headlines released after close the day before (4:00pm ET x-1)
 # until close the day of (4:00pm ET x).
-def sort_news_dates(news_df: pd.DataFrame, data_df: pd.DataFrame):
+def sort_news_dates(news_df: pd.DataFrame, data_df: pd.DataFrame) -> list:
     dates = data_df["date"]
 
     iso_dates = pd.DataFrame(data=pd.to_datetime(news_df["created_at"], utc=True))
@@ -67,9 +91,9 @@ def sort_news_dates(news_df: pd.DataFrame, data_df: pd.DataFrame):
     proper_dates = []
     date_headline_objs: dict = {}
     for _, r in datetime_df.iterrows():
-        d = r[0]
-        t = r[1]
-        h = r[2]
+        d = r.iloc[0]
+        t = r.iloc[1]
+        h = r.iloc[2]
         if type(h) is str:
             continue
 
@@ -112,17 +136,28 @@ def sort_news_dates(news_df: pd.DataFrame, data_df: pd.DataFrame):
             }
         )
 
-    dump_date = {"TICK": "MSFT", "data": list_of_dicts}
-
-    with Path(out_dir + "/MSFT_data.json").open("w") as fp:
-        json.dump(dump_date, fp, indent=2)
+    return list_of_dicts
 
 
-def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
-    news_df = pd.read_csv(raw_dir + news_dir + "MSFT_2015-01-01_2025-05-03.csv")
-    equities_df = pd.read_csv(
-        raw_dir + equities_dir + "MSFT/2015-01-01_2025-05-03_1d.csv"
-    )
+def load_dataframes(
+    ticker: str, start: str, end: str
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    daterange = start + "_" + end
+
+    news_path = raw_dir + news_dir + ticker + "/" + daterange + ".csv"
+    equities_path = raw_dir + equities_dir + ticker + "/" + daterange + "_1d.csv"
+
+    if not os.path.exists(news_path):
+        raise Exception(
+            "News Data does not exist. Filename " + news_path + " not found"
+        )
+    if not os.path.exists(equities_path):
+        raise Exception(
+            "Equities Data does not exist. Filename " + equities_path + " not found"
+        )
+
+    news_df = pd.read_csv(news_path)
+    equities_df = pd.read_csv(equities_path)
 
     equities_df = equities_df.drop(index=[0, 1, 2])
     equities_df.columns = ["date", "close", "high", "low", "open", "volume"]
@@ -131,8 +166,19 @@ def load_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def main() -> None:
-    news_df, equities_df = load_dataframes()
-    sort_news_dates(news_df, equities_df)
+    parser = argparse.ArgumentParser(description="Merge news headlines and ohclv data")
+    parser.add_argument("--symbol", required=True, help="Ticker symbol (e.g. MSFT)")
+    parser.add_argument("--start", required=True, help="Start Date (YYYY-MM-DD)")
+    parser.add_argument("--end", required=True, help="End Date (YYYY-MM-DD)")
+
+    args = parser.parse_args()
+    ticker = args.symbol
+    start_date = args.start
+    end_date = args.end
+
+    news_df, equities_df = load_dataframes(ticker, start_date, end_date)
+    data = sort_news_dates(news_df, equities_df)
+    save_to_json(ticker, data)
 
 
 if __name__ == "__main__":
